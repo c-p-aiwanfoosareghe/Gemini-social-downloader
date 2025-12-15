@@ -1,17 +1,13 @@
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
-# Set the working directory in the container
-WORKDIR /usr/src/app
+# ... (Lines before this are fine)
 
-# Copy the current directory contents into the container
-COPY . .
+# Set the working directory (e.g., /usr/src/app)
+WORKDIR /usr/src/app 
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy all files from the root of your repo into the container
+COPY . . 
 
-# Make port 8000 available to the world outside this container
-EXPOSE 8000
-
-# Run uvicorn (the ASGI server) when the container launches
-CMD ["uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Run the correct command
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
