@@ -83,22 +83,22 @@ async def get_downloaded_file(job_id: str):
     )
 
   # app/api/router.py (Inside get_downloaded_file)
+# app/api/router.py (Inside get_downloaded_file)
+
 # ...
     file_path = status_obj.download_path
     
-    # 1. Check if the path variable itself is null or empty
     if not file_path:
+         # Internal error: status said COMPLETED but path wasn't saved.
          raise HTTPException(status_code=500, detail="Job completed, but no file path was saved.")
          
-    # 2. Check if the file exists at the stored path
     if not os.path.exists(file_path):
-         # If the path exists but the file is gone (due to server restart)
+         # 💥 CRITICAL FIX: Raise 404 or 410 (Gone) to signal temporary loss
          raise HTTPException(
-             status_code=404, 
-             detail="File not found on server. It may have been deleted due to server restart."
+             # Use 410 (Gone) to show the file was once there but is no longer available.
+             status_code=410, 
+             detail="File was downloaded, but has been deleted from the temporary server storage."
          )
 
-    # ... rest of the FileResponse logic
-
-
-
+    # If the file exists, it will proceed to FileResponse
+# ...
