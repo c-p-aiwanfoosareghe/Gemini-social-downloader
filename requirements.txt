@@ -3,3 +3,4 @@ uvicorn[standard]
 pydantic
 instaloader    # A robust library for public Instagram content
 yt-dlp         # Can handle Facebook public video downloads
+aiofiles
