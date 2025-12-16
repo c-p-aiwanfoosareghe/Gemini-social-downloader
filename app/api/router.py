@@ -1,8 +1,10 @@
 # app/api/router.py
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from app.models import DownloadRequest
-from app.services.download_manager import JOB_STORE, run_download_job
-
+# --- UPDATED IMPORTS ---
+from app.state import JOB_STORE # Import JOB_STORE from its own simple file
+from app.services.download_manager import run_download_job # Only need the function
+# -----------------------
 router = APIRouter(prefix="/api/v1")
 
 @router.post("/download/submit", response_model=DownloadStatus, status_code=202)
