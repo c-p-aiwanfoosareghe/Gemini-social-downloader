@@ -1,6 +1,7 @@
 # app/api/router.py
 
 import uuid
+import os
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 
 # Import all necessary models and service components
