@@ -1,10 +1,10 @@
 # app/api/router.py
 
 import uuid
-import os
+import os # Necessary for os.path.exists() and os.path.basename()
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse # Necessary for serving files
 
-# Import all necessary models and service components
 from app.models import DownloadRequest, DownloadStatus 
 from app.state import JOB_STORE
 from app.services.download_manager import run_download_job 
@@ -31,7 +31,6 @@ async def submit_download_job(request: DownloadRequest, background_tasks: Backgr
     JOB_STORE[job_id] = new_status
     
     # Add the long-running task to FastAPI's BackgroundTasks queue
-    # This allows the API to return 202 immediately.
     background_tasks.add_task(run_download_job, job_id, url_str)
     
     return new_status
@@ -51,13 +50,14 @@ async def get_job_status(job_id: str):
 async def get_downloaded_file(job_id: str):
     """
     Retrieves the downloaded file if the job is COMPLETED.
+    This endpoint uses temporary local storage.
     """
     status_obj = JOB_STORE.get(job_id)
     
     if not status_obj:
         raise HTTPException(status_code=404, detail="Job ID not found.")
     
-    # Check if the download is complete
+    # 1. Check if the download is complete
     if status_obj.status != "COMPLETED":
         raise HTTPException(
             status_code=409, 
@@ -66,39 +66,23 @@ async def get_downloaded_file(job_id: str):
     
     file_path = status_obj.download_path
     
-    # Sanity check: Ensure the path is safe and the file exists
-    if not file_path or not os.path.exists(file_path):
-         # This case indicates a system issue or a deleted file
-         raise HTTPException(status_code=500, detail="File path not found on server.")
-
-    # Extract the file name from the metadata for the response header
-    filename = status_obj.metadata.get("filename", os.path.basename(file_path))
-    
-    # 💥 CRITICAL: Use FileResponse to stream the file to the client.
-    # The media_type is inferred, but setting filename ensures the browser downloads it.
-    return FileResponse(
-        path=file_path,
-        filename=filename,
-        media_type='application/octet-stream' # Generic type for forcing download
-    )
-
-  # app/api/router.py (Inside get_downloaded_file)
-# app/api/router.py (Inside get_downloaded_file)
-
-# ...
-    file_path = status_obj.download_path
-    
+    # 2. Check if path was saved
     if not file_path:
-         # Internal error: status said COMPLETED but path wasn't saved.
          raise HTTPException(status_code=500, detail="Job completed, but no file path was saved.")
          
+    # 3. Check if the file still exists (The key check on Render's ephemeral storage)
     if not os.path.exists(file_path):
-         # 💥 CRITICAL FIX: Raise 404 or 410 (Gone) to signal temporary loss
+         # Raise 410 (Gone) to signal file loss due to temporary storage/server restart
          raise HTTPException(
-             # Use 410 (Gone) to show the file was once there but is no longer available.
              status_code=410, 
              detail="File was downloaded, but has been deleted from the temporary server storage."
          )
 
-    # If the file exists, it will proceed to FileResponse
-# ...
+    # 4. Serve the file
+    filename = status_obj.metadata.get("filename", os.path.basename(file_path))
+    
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type='application/octet-stream'
+    )
