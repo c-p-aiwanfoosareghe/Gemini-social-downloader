@@ -1,13 +1,19 @@
-# Use an official Python runtime as a parent image
+# Use a Python base image
 FROM python:3.11-slim
 
-# ... (Lines before this are fine)
+# Set the working directory
+WORKDIR /usr/src/app
 
-# Set the working directory (e.g., /usr/src/app)
-WORKDIR /usr/src/app 
+# Copy all files from your repo root to the container working directory
+# Since your code is in 'app/', it will copy app/, requirements.txt, etc.
+COPY . .
 
-# Copy all files from the root of your repo into the container
-COPY . . 
+# Install dependencies (yt-dlp, instaloader, uvicorn)
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Run the correct command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose the port (optional, but good practice)
+EXPOSE 8000
+
+# This is the command that Render runs by default (the equivalent of "Start Command")
+# It runs the server using the python module command and the correct path: app.main:app
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
