@@ -1,4 +1,3 @@
-# app/services/download_manager.py
 import os
 import re
 from typing import Any, Tuple
@@ -56,30 +55,36 @@ def _handle_instagram_download(url: str, job_id: str) -> str:
 def _handle_yt_dlp_download(url: str, job_id: str) -> Tuple[str, dict]:
     """Uses yt-dlp to download public content, common for Facebook videos."""
     
-    # 💥 CRITICAL: Imports yt-dlp here, not at the top level.
     import yt_dlp      
 
+    # 1. Define the desired output path template
+    # This correctly puts files in: downloaded_content/job_id/VIDEO_TITLE.mp4
     output_template = os.path.join(DOWNLOAD_DIR, job_id, '%(title)s.%(ext)s')
     
     ydl_opts = {
-        'outtmpl': output_template,
+        'outtmpl': output_template, # Rely only on outtmpl
         'format': 'best',
         'noplaylist': True,
         'quiet': True,
         'simulate': False,
         'forcefilename': True,
-        'paths': {'home': os.path.join(DOWNLOAD_DIR, job_id)}
+        # 💥 CRITICAL FIX: REMOVE THE 'paths' KEY
+        # 'paths': {'home': os.path.join(DOWNLOAD_DIR, job_id)} <-- DELETE THIS LINE
     }
     
+    # 2. Add the path normalization and final filename check
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         final_filename = ydl.prepare_filename(info_dict)
         
-        # Robustly ensure we get the final path
+        # Robustly ensure we get the final path and normalize it
         if not final_filename:
+            # Fallback for unexpected scenarios
             final_filename = os.path.join(DOWNLOAD_DIR, job_id, os.path.basename(info_dict['filepath']))
                  
-        return final_filename, info_dict
+        # 💥 CRITICAL STEP: Normalize the path before returning it!
+        return os.path.normpath(final_filename), info_dict
+
 
 # --- Main Worker Function (Public) ---
 
